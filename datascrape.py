@@ -16,9 +16,14 @@ offices = {"Porirua": "3521",
            }
 
 def main():
-    o = Office("1663")
-    o.get_listing_ids()
-    print o.get_listing_ids()
+    #o = Office("1663")
+    #o.get_listing_ids()
+    #listing_ids = o.get_listing_ids()
+
+    listing = Listing("1718302")
+    import pprint
+    pprint.pprint(listing.get_listing_detail())
+
 
 
 class WebModel(object):
@@ -39,13 +44,13 @@ class WebModel(object):
         except KeyError:
             # Throttle if neccesary
             currentTime = time.time()
-            if (hasattr(self, 'lastRequestTime') and 
-                currentTime - self.lastRequestTime < self.throttleDelay):
+            if (hasattr(WebModel, 'lastRequestTime') and 
+                currentTime - WebModel.lastRequestTime < self.throttleDelay):
                 self.throttleTime = (self.throttleDelay -
-                                     (currentTime - self.lastRequestTime))
+                                     (currentTime - WebModel.lastRequestTime))
                 logging.debug("ThrottlingProcessor: Sleeping for %s seconds" % self.throttleTime)
                 time.sleep(self.throttleTime)
-            self.lastRequestTime = time.time()
+            WebModel.lastRequestTime = time.time()
             # Make a soup object from the specified url
             logging.debug("Fetching url: " + url)            
             cache[url] = BeautifulSoup(self.fetch_html_page(url))
@@ -97,6 +102,38 @@ class Office(WebModel):
     def extract_listing_id(self, text):
         # Get the numerical part of the listing ID only
         return re.search(r"\d+", text).group()
+
+
+class Listing(WebModel):
+
+    BASE_URL = "http://www.realestate.co.nz/"
+
+    def __init__(self, listing_id, throttleDelay=5):
+        WebModel.__init__(self, throttleDelay)
+        self.listing_id = listing_id
+
+    def get_listing_detail(self):
+        listing_details = {'listing id': self.listing_id}
+
+        url = self.get_listing_url()
+        listings_page = self.make_soup(url)
+
+        headerDetails = listings_page.find('div', {'class': 'headerDetails'})
+        listing_details['heading'] = headerDetails.find('h1').text
+        listing_details['price'] = headerDetails.find('h3').contents[0].strip()
+
+        breadcrumbs = listings_page.find(id='breadcrumbs')
+        listing_details['address'] = [a.text for a in breadcrumbs.find_all('a')[1:]]
+
+        description = listings_page.find('div', {'class': 'description detailsPage'})
+        listing_details['description'] = description.p.text
+
+        return listing_details
+
+
+    def get_listing_url(self):
+        # The url of the listing detail page.
+        return "%s%s" % (self.__class__.BASE_URL, self.listing_id)
 
 
 if __name__ == '__main__':
