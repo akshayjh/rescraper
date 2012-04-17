@@ -128,6 +128,9 @@ class Listing(WebModel):
         description = listings_page.find('div', {'class': 'description detailsPage'})
         listing_details['description'] = description.p.text
 
+        agency_details = listings_page.find('div', {'class': 'agencyDetailsBox'})
+        listing_details['agency id'] = re.search(r'^.*?(\d+)$', agency_details.a['class'][0]).group()
+
         return listing_details
 
 
