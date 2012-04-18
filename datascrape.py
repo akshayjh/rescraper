@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import re
 import time
 import logging
+import unittest
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -25,7 +26,6 @@ def main():
     pprint.pprint(listing.get_listing_detail())
 
 
-
 class WebModel(object):
     """Abstract class which forms the base for each kind of retrievable model.
 
@@ -39,9 +39,6 @@ class WebModel(object):
 
     def __init__(self, throttleDelay=5):
         self.throttleDelay = throttleDelay
-
-    def make_soup(self, url):
-        return BeautifulSoup(self.fetch_html_page(url))
 
     def fetch_html_page(self, url):
         # fetch html page from the web
@@ -79,7 +76,7 @@ class Office(WebModel):
 
         while True:
             url = self.get_listings_page_url(page_number)
-            listings_page = self.make_soup(url)
+            listings_page = BeautifulSoup(url)
 
             for listing_element in listings_page.find_all('div', {'class': 'listing'}):
                 # listing ID is contained in the 'id' tag of the listing div.
@@ -118,7 +115,7 @@ class Listing(WebModel):
         listing_details = {'listing id': self.listing_id}
 
         url = self.get_listing_url()
-        listings_page = self.make_soup(url)
+        listings_page = BeautifulSoup(url)
 
         headerDetails = listings_page.find('div', {'class': 'headerDetails'})
         listing_details['heading'] = headerDetails.find('h1').text
@@ -140,5 +137,39 @@ class Listing(WebModel):
         return "%s%s" % (self.__class__.BASE_URL, self.listing_id)
 
 
+class WebModelTest(unittest.TestCase):
+
+    def setUp(self):
+        self.web_model = WebModel()
+        self.test_url = "http://www.google.com"
+        self.expected_content = "<!doctype html>"
+
+    def test_defaults(self):
+        self.assertEquals(self.web_model.throttleDelay, 5)
+
+    def test_fetch_html_page(self):
+        # check that the cache exists and is an empty dict
+        self.assertEquals(WebModel.html_cache, {})
+        # test that html pages can be retrieved from the web
+        test_html = self.web_model.fetch_html_page(self.test_url)
+        self.assertIn(self.expected_content, test_html)
+        # check that the correct key has been created in the cache
+        self.assertIn(self.test_url, WebModel.html_cache)
+        # check that the correct html was cached
+        self.assertEquals(WebModel.html_cache[self.test_url], test_html)
+
+
+class OfficeTest(unittest.TestCase):
+
+    def setUp(self):
+        self.office = Office("12345")
+
+    def test_get_listings_page_url(self):
+        expected_url = "http://www.realestate.co.nz/profile/office/12345/page1"
+        self.assertEquals(self.office.get_listings_page_url(1), expected_url)
+        expected_url = "http://www.realestate.co.nz/profile/office/12345/page2"
+        self.assertEquals(self.office.get_listings_page_url(2), expected_url)
+
+
 if __name__ == '__main__':
-    main()
+    unittest.main()
