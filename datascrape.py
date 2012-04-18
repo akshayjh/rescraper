@@ -16,9 +16,9 @@ offices = {"Porirua": "3521",
            }
 
 def main():
-    #o = Office("1663")
-    #o.get_listing_ids()
-    #listing_ids = o.get_listing_ids()
+    o = Office("1663")
+    o.get_listing_ids()
+    listing_ids = o.get_listing_ids()
 
     listing = Listing("1718302")
     import pprint
@@ -35,12 +35,18 @@ class WebModel(object):
     Has throttleDelay to mitigate impact on the target web server.
     """
 
+    html_cache = {}
+
     def __init__(self, throttleDelay=5):
         self.throttleDelay = throttleDelay
 
-    def make_soup(self, url, cache={}):
+    def make_soup(self, url):
+        return BeautifulSoup(self.fetch_html_page(url))
+
+    def fetch_html_page(self, url):
+        # fetch html page from the web
         try:
-            return cache[url]
+            return WebModel.html_cache[url]
         except KeyError:
             # Throttle if neccesary
             currentTime = time.time()
@@ -53,14 +59,10 @@ class WebModel(object):
             WebModel.lastRequestTime = time.time()
             # Make a soup object from the specified url
             logging.debug("Fetching url: " + url)            
-            cache[url] = BeautifulSoup(self.fetch_html_page(url))
-            return cache[url]
+            WebModel.html_cache[url] = urllib2.urlopen(url).read()
+            return WebModel.html_cache[url]
         finally:
             logging.debug("Returning cache: " + url)
-
-    def fetch_html_page(self, url):
-        # fetch html page from the web
-        return urllib2.urlopen(url).read()
 
 
 class Office(WebModel):
@@ -132,7 +134,6 @@ class Listing(WebModel):
         listing_details['agency id'] = re.search(r'^.*?(\d+)$', agency_details.a['class'][0]).group()
 
         return listing_details
-
 
     def get_listing_url(self):
         # The url of the listing detail page.
