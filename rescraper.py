@@ -71,21 +71,29 @@ class Office(WebModel):
         self.office_id = office_id
 
     def get_listing_ids(self):
+        # Iterates through all of the Listings summary pages for this
+        # Office and returns a list of all Listing IDs
         page_number = 1
         listing_ids = []
 
         while True:
             url = self.get_listings_page_url(page_number)
-            listings_page = BeautifulSoup(url)
-
-            for listing_element in listings_page.find_all('div', {'class': 'listing'}):
-                # listing ID is contained in the 'id' tag of the listing div.
-                listing_ids.append(self.extract_listing_id(listing_element['id']))
-
-            logging.debug("Listings found: %d" % len(listing_ids))
-            if self.is_last_page(listings_page):
+            soup_page = BeautifulSoup(url)
+            listing_ids.append(get_listing_ids_from_soup(soup_page))
+            if self.is_last_page(soup_page):
                 break
             page_number += 1
+
+        return listing_ids
+
+    def get_listing_ids_from_soup(self, soup_page):
+        # Extracts and returns all of the Listing IDs from a single soup page.
+        listing_ids = []
+
+        for listing_element in soup_page.find_all('div', {'class': 'listing'}):
+            # listing ID is contained in the 'id' tag of the listing div.
+            listing_ids.append(self.extract_listing_id(listing_element['id']))
+            logging.debug("Listings found: %d" % len(listing_ids))
 
         return listing_ids
 
@@ -179,6 +187,21 @@ class OfficeTest(unittest.TestCase):
         test_html = file("test_html/office_page2_test.html").read()
         test_soup = BeautifulSoup(test_html)
         self.assertTrue(self.office.is_last_page(test_soup))
+
+    def test_get_listing_ids_from_soup(self):
+        test_html = file("test_html/office_page2_test.html").read()
+        test_soup = BeautifulSoup(test_html)
+        found_listings = self.office.get_listing_ids_from_soup(test_soup)
+        expected_listings = ["1650249",
+                             "1644095",
+                             "1641265",
+                             "1641262",
+                             "1622767",
+                             "1617538",
+                             "1241981",
+                             "646581",
+                             ]
+        self.assertEqual(found_listings, expected_listings)
 
 
 if __name__ == '__main__':
