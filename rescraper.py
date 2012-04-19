@@ -169,6 +169,16 @@ class OfficeTest(unittest.TestCase):
         self.assertEquals(self.office.get_listings_page_url(1), expected_url)
         expected_url = "http://www.realestate.co.nz/profile/office/12345/page2"
         self.assertEquals(self.office.get_listings_page_url(2), expected_url)
+    
+    def test_is_last_page(self):
+        # test page 1 of 2
+        test_html = file("test_html/office_page1_test.html").read()
+        test_soup = BeautifulSoup(test_html)
+        self.assertFalse(self.office.is_last_page(test_soup))
+        # test page 2 of 2
+        test_html = file("test_html/office_page2_test.html").read()
+        test_soup = BeautifulSoup(test_html)
+        self.assertTrue(self.office.is_last_page(test_soup))
 
 
 if __name__ == '__main__':
