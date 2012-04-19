@@ -70,6 +70,15 @@ class Office(WebModel):
         WebModel.__init__(self, throttleDelay)
         self.office_id = office_id
 
+    def get_office_details(self):
+        office_url = get_listings_page_url(1)
+        html_page = self.fetch_html_page(url)
+        soup_page = BeautifulSoup(html_page)
+        return get_office_details_from_soup(self, soup_page)
+
+    def get_office_details_from_soup(self, soup_page):
+        pass
+
     def get_listing_ids(self):
         # Iterates through all of the Listings summary pages for this
         # Office and returns a list of all Listing IDs
@@ -78,7 +87,8 @@ class Office(WebModel):
 
         while True:
             url = self.get_listings_page_url(page_number)
-            soup_page = BeautifulSoup(url)
+            html_page = self.fetch_html_page(url)
+            soup_page = BeautifulSoup(html_page)
             listing_ids.append(get_listing_ids_from_soup(soup_page))
             if self.is_last_page(soup_page):
                 break
@@ -203,6 +213,17 @@ class OfficeTest(unittest.TestCase):
                              ]
         self.assertEqual(found_listings, expected_listings)
 
+    def test_get_office_details_from_soup(self):
+        test_html = file("test_html/office_page1_test.html").read()
+        test_soup = BeautifulSoup(test_html)
+        result = self.office.get_office_details_from_soup(test_soup)
+        expected_result = {
+            "name":"Double Winkel Real Estate Ltd (Licensed: REAA 2008) - Professionals, Paremata",
+            "address": "105 Mana Eslpande, Paremata, WELLINGTON",
+            "phone": "04 233 9955"
+        }
+        self.assertEqual(result, expected_result)
 
+            
 if __name__ == '__main__':
     unittest.main()
