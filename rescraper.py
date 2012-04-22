@@ -5,26 +5,6 @@ import time
 import logging
 import unittest
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
-offices = {"Porirua": "3521",
-           "Paremata": "3551",
-           "Tawa": "3534",
-           "Whitby": "3541",
-           "Otaki": "1756",
-           "Waikanae": "1703",
-           "Paraparaumu": "1663",
-           }
-
-def main():
-    o = Office("1663")
-    o.get_listing_ids()
-    listing_ids = o.get_listing_ids()
-
-    listing = Listing("1718302")
-    import pprint
-    pprint.pprint(listing.get_listing_detail())
-
 
 class WebModel(object):
     """Abstract class which forms the base for each kind of retrievable model.
@@ -71,18 +51,18 @@ class Office(WebModel):
         self.office_id = office_id
 
     def get_office_details(self):
-        office_url = get_listings_page_url(1)
-        html_page = self.fetch_html_page(url)
+        office_url = self.get_listings_page_url(1)
+        html_page = self.fetch_html_page(office_url)
         soup_page = BeautifulSoup(html_page)
-        return get_office_details_from_soup(self, soup_page)
+        return self.get_office_details_from_soup(soup_page)
 
     def get_office_details_from_soup(self, soup_page):
         return {
-            'name': get_name(soup_page),
-            'address': get_address(soup_page),
-            'phone': get_phone(soup_page),
-            'website': get_website(soup_page),
-            'position': get_position(soup_page),
+            'name': self.get_name(soup_page),
+            'address': self.get_address(soup_page),
+            'phone': self.get_phone(soup_page),
+            'website': self.get_website(soup_page),
+            'position': self.get_position(soup_page),
         }
 
     def get_name(self, soup_page):
@@ -118,7 +98,7 @@ class Office(WebModel):
             url = self.get_listings_page_url(page_number)
             html_page = self.fetch_html_page(url)
             soup_page = BeautifulSoup(html_page)
-            listing_ids.append(get_listing_ids_from_soup(soup_page))
+            listing_ids.extend(self.get_listing_ids_from_soup(soup_page))
             if self.is_last_page(soup_page):
                 break
             page_number += 1
@@ -280,5 +260,10 @@ class OfficeTest(unittest.TestCase):
         self.assertEqual(position, self.expected_office_details['position'])
 
             
+# class OfficeTest(unittest.TestCase):
+
+
+
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     unittest.main()
