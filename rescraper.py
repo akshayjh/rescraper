@@ -77,7 +77,36 @@ class Office(WebModel):
         return get_office_details_from_soup(self, soup_page)
 
     def get_office_details_from_soup(self, soup_page):
-        pass
+        return {
+            'name': get_name(soup_page),
+            'address': get_address(soup_page),
+            'phone': get_phone(soup_page),
+            'website': get_website(soup_page),
+            'position': get_position(soup_page),
+        }
+
+    def get_name(self, soup_page):
+        return soup_page.find('div', id="office-details").h2.text
+
+    def get_address(self, soup_page):
+        return soup_page.find('div', id="office-details").li.text
+
+    def get_phone(self, soup_page):
+        phone_pattern = re.compile("Phone:([ 0-9]+)")
+        result = soup_page.find('li', text=phone_pattern).text
+        return re.match(phone_pattern, result).groups()[0].strip()
+
+    def get_website(self, soup_page):
+        return soup_page.find('a', text="View our website").get('href')
+
+    def get_position(self, soup_page):
+        pos_pattern = re.compile(r"position: new google.maps.LatLng\((-?[\.\d]+), (-?[\.\d]+)\)")
+        result = soup_page.find('script', text=pos_pattern).text
+        latlong = re.search(pos_pattern, result).groups()
+        return {
+            "lat": latlong[0].strip(),
+            "long": latlong[1].strip(),
+        }
 
     def get_listing_ids(self):
         # Iterates through all of the Listings summary pages for this
@@ -182,47 +211,73 @@ class OfficeTest(unittest.TestCase):
     def setUp(self):
         self.office = Office("12345")
 
+        self.expected_office_details = {
+            "id":"3551",
+            "name":"Double Winkel Real Estate Ltd (Licensed: REAA 2008) - Professionals, Paremata",
+            "address": "105 Mana Esplande, Paremata, WELLINGTON",
+            "phone": "04 233 9955",
+            "website": "http://www.doublerealestate.co.nz",
+            "position": {
+                "lat": "-41.09264",
+                "long": "174.8684",
+            },
+        }
+
+        self.expected_listings = [
+            "1650249",
+            "1644095",
+            "1641265",
+            "1641262",
+            "1622767",
+            "1617538",
+            "1241981",
+            "646581",
+        ]
+
+        # test page 1 of 2
+        test_html = file("test_html/office_page1_test.html").read()
+        self.test_soup_page1 = BeautifulSoup(test_html)
+        # test page 2 of 2
+        test_html = file("test_html/office_page2_test.html").read()
+        self.test_soup_page2 = BeautifulSoup(test_html)
+
     def test_get_listings_page_url(self):
         expected_url = "http://www.realestate.co.nz/profile/office/12345/page1"
         self.assertEquals(self.office.get_listings_page_url(1), expected_url)
         expected_url = "http://www.realestate.co.nz/profile/office/12345/page2"
         self.assertEquals(self.office.get_listings_page_url(2), expected_url)
     
-    def test_is_last_page(self):
-        # test page 1 of 2
-        test_html = file("test_html/office_page1_test.html").read()
-        test_soup = BeautifulSoup(test_html)
-        self.assertFalse(self.office.is_last_page(test_soup))
-        # test page 2 of 2
-        test_html = file("test_html/office_page2_test.html").read()
-        test_soup = BeautifulSoup(test_html)
-        self.assertTrue(self.office.is_last_page(test_soup))
+    def test_is_last_page_1(self):
+        # test for a negative case
+        self.assertFalse(self.office.is_last_page(self.test_soup_page1))
+
+    def test_is_last_page_2(self):
+        # test for a positive case
+        self.assertTrue(self.office.is_last_page(self.test_soup_page2))
 
     def test_get_listing_ids_from_soup(self):
-        test_html = file("test_html/office_page2_test.html").read()
-        test_soup = BeautifulSoup(test_html)
-        found_listings = self.office.get_listing_ids_from_soup(test_soup)
-        expected_listings = ["1650249",
-                             "1644095",
-                             "1641265",
-                             "1641262",
-                             "1622767",
-                             "1617538",
-                             "1241981",
-                             "646581",
-                             ]
-        self.assertEqual(found_listings, expected_listings)
+        found_listings = self.office.get_listing_ids_from_soup(self.test_soup_page2)
+        self.assertEqual(found_listings, self.expected_listings)
 
-    def test_get_office_details_from_soup(self):
-        test_html = file("test_html/office_page1_test.html").read()
-        test_soup = BeautifulSoup(test_html)
-        result = self.office.get_office_details_from_soup(test_soup)
-        expected_result = {
-            "name":"Double Winkel Real Estate Ltd (Licensed: REAA 2008) - Professionals, Paremata",
-            "address": "105 Mana Eslpande, Paremata, WELLINGTON",
-            "phone": "04 233 9955"
-        }
-        self.assertEqual(result, expected_result)
+    def test_get_name(self):
+        name = self.office.get_name(self.test_soup_page1)
+        self.assertEqual(name, self.expected_office_details['name'])
+ 
+    def test_get_address(self):
+        address = self.office.get_address(self.test_soup_page1)
+        self.assertEqual(address, self.expected_office_details['address'])
+
+    def test_get_phone(self):
+        phone = self.office.get_phone(self.test_soup_page1)
+        self.assertEqual(phone, self.expected_office_details['phone'])
+
+    def test_get_website(self):
+        website = self.office.get_website(self.test_soup_page1)
+        self.assertEqual(website, self.expected_office_details['website'])
+
+    def test_get_position(self):
+        position = self.office.get_position(self.test_soup_page1)
+        self.assertEqual(position, self.expected_office_details['position'])
 
             
 if __name__ == '__main__':
