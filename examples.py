@@ -27,7 +27,8 @@ def main():
     for listing_id in listing_ids:
       print "Listing: %s" % listing_id
       listing = rescraper.Listing(listing_id)
-      pprint.pprint(listing.get_listing_detail())
+      print "URL: %s" % listing.reinz_url
+      pprint.pprint(listing.get_listing_details())
 
 if __name__ == '__main__':
   main()
