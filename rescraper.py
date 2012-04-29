@@ -165,10 +165,10 @@ class Listing(WebModel):
         WebModel.__init__(self, throttle_delay)
         self.listing_id = listing_id
         if test_listing_html:
-            self.soup_page = BeautifulSoup(test_listing_html)
+            self.html_page = test_listing_html
         else:
-            html_page = self.fetch_html_page(self.reinz_url)
-            self.soup_page = BeautifulSoup(html_page)
+            self.html_page = self.fetch_html_page(self.reinz_url)
+        self.soup_page = BeautifulSoup(self.html_page)
 
     def get_listing_details(self):
         ''' Collect all of the listing details into a dictionary '''
@@ -182,6 +182,7 @@ class Listing(WebModel):
             'address',
             'agency_url',
             'reinz_url',
+            'photo_urls'
             )
         for attr in attributes:
             listing_details[attr] = getattr(self, attr)
@@ -228,14 +229,24 @@ class Listing(WebModel):
 
     @property
     def agency_url(self):
+        ''' The url of this listing on the agency's own website '''
         return self.soup_page.find(
             'span', {'class': 'viewMoreDetails'}
             ).a['href']
 
     @property
     def reinz_url(self):
-        # The url of the listing detail page.
+        ''' The url of the listing detail page. '''
         return "%s%s" % (self.__class__.BASE_URL, self.listing_id)
+
+    @property
+    def photo_urls(self):
+        ''' Photos of this property '''
+        pattern = re.compile(r'\["(.+\.jpg)"\]')
+        return re.findall(pattern, self.html_page)
+
+
+
 
 
 class WebModelTest(unittest.TestCase):
@@ -380,7 +391,18 @@ class ListingTest(unittest.TestCase):
                 '5B Lawson Place',
                 ],
             'agency_url': 'http://www.eves.co.nz/EGT1635e',
-            'reinz_url': 'http://www.realestate.co.nz/1669912',           
+            'reinz_url': 'http://www.realestate.co.nz/1669912',
+            'photo_urls': [
+                "http://images16.realestate.co.nz/listings/1669912/ec03876afd913de159224dc80e581f49.scale.1024x682.jpg",
+                "http://images16.realestate.co.nz/listings/1669912/f9eb2f728f0da19bdf3095051de13a15.scale.1024x682.jpg",
+                "http://images16.realestate.co.nz/listings/1669912/6d3187ce1af59e62858852253d307987.scale.1024x682.jpg",
+                "http://images16.realestate.co.nz/listings/1669912/9987178d56473dc44fbe9c8ef9d9d9bc.scale.1024x682.jpg",
+                "http://images16.realestate.co.nz/listings/1669912/1212723a8d9a5354fdf9129d04115e94.scale.1024x682.jpg",
+                "http://images16.realestate.co.nz/listings/1669912/e0cb946ccbb3494d12e62f6b473ccd21.scale.1024x682.jpg",
+                "http://images16.realestate.co.nz/listings/1669912/47568f6a8efb29ea5d04ad70e6311968.scale.1024x682.jpg",
+                "http://images16.realestate.co.nz/listings/1669912/eb39332e022fbfe53668723df55441c3.scale.1024x682.jpg",
+                "http://images16.realestate.co.nz/listings/1669912/0f05b2e44de9e55958e5948a5aaaa58a.scale.1024x682.jpg",
+                ],
         }
 
     def test_get_listing_details(self):
